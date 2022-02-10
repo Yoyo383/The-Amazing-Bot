@@ -1,6 +1,7 @@
 import {
   Client,
   CommandInteraction,
+  Guild,
   Intents,
   MessageEmbed,
   Permissions,
@@ -12,6 +13,7 @@ import {
 import commandList from './commands';
 
 import { config } from 'dotenv';
+import { hello, jail, unjail } from './cmdImplementations';
 config();
 
 const client = new Client({
@@ -30,7 +32,7 @@ client.on('ready', async () => {
     const commandNames = ['hello', 'jail', 'unjail'];
     commandNames.forEach(async (commandName) => {
       const command = await guild.commands.fetch(
-        guild.commands.cache.find((c) => c.name === commandName).id
+        guild.commands.cache.find((cmd) => cmd.name === commandName).id
       );
       command.permissions.add({
         permissions: [
@@ -52,24 +54,6 @@ client.on('ready', async () => {
   });
 
   console.log('Successfully reloaded application (/) commands.');
-
-  if (!guild.roles.cache.find((role) => role.name === 'JAILED')) {
-    await guild.roles.create({
-      name: 'JAILED',
-      color: 'RED',
-      permissions: [Permissions.DEFAULT],
-    });
-  }
-  guild.channels.cache.forEach((channel) => {
-    if (channel instanceof VoiceChannel) {
-      if (!channel.name.includes('Jail')) {
-        channel.permissionOverwrites.create(
-          guild.roles.cache.find((role) => role.name === 'JAILED'),
-          { CONNECT: false }
-        );
-      }
-    }
-  });
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -77,68 +61,9 @@ client.on('interactionCreate', async (interaction) => {
 
   const command = interaction as CommandInteraction;
 
-  if (command.commandName === 'hello') {
-    await command.reply(`Hello ${command.options.getString('suffix')}`);
-  } else if (command.commandName === 'jail') {
-    const user = command.options.getUser('user');
-
-    const guild = command.guild;
-    const member = guild.members.cache.get(user.id);
-
-    if (member.roles.cache.find((role) => role.name === 'JAILED')) {
-      await command.reply({
-        content: `You can't jail ${user} as they are already jailed!`,
-        ephemeral: true,
-      });
-      return;
-    }
-
-    await guild.channels.create(`${user.username}'s Jail`, {
-      type: 'GUILD_VOICE',
-    });
-
-    const channel = guild.channels.cache.find(
-      (channel) => channel.name === `${user.username}'s Jail`
-    ) as VoiceBasedChannel;
-
-    if (member.voice.channel) member.voice.setChannel(channel);
-    member.roles.add(guild.roles.cache.find((role) => role.name === 'JAILED'));
-
-    let embed: MessageEmbed = createEmbed(true, user, command);
-
-    await command.reply({ embeds: [embed] });
-  } else if (command.commandName === 'unjail') {
-    const user = command.options.getUser('user');
-
-    const guild = command.guild;
-    const member = guild.members.cache.get(user.id);
-
-    if (!member.roles.cache.find((role) => role.name === 'JAILED')) {
-      await command.reply({
-        content: `You can't unjail ${user} as they are not jailed!`,
-        ephemeral: true,
-      });
-      return;
-    }
-
-    await member.roles.remove(
-      guild.roles.cache.find((role) => role.name === 'JAILED').id
-    );
-
-    if (
-      guild.channels.cache.find(
-        (channel) => channel.name === `${user.username}'s Jail`
-      )
-    ) {
-      await guild.channels.cache
-        .find((channel) => channel.name === `${user.username}'s Jail`)
-        .delete();
-    }
-
-    const embed = createEmbed(false, user, command);
-
-    await command.reply({ embeds: [embed] });
-  }
+  if (command.commandName === 'hello') await hello(command);
+  else if (command.commandName === 'jail') await jail(command);
+  else if (command.commandName === 'unjail') await unjail(command);
 });
 
 client.on('channelCreate', (channel) => {
@@ -154,7 +79,7 @@ client.on('channelCreate', (channel) => {
   }
 });
 
-function createEmbed(
+export function createEmbed(
   jailed: boolean,
   user: User,
   command: CommandInteraction
@@ -178,6 +103,33 @@ function createEmbed(
       value: command.options.getString('reason'),
     });
   return embed;
+}
+
+export async function createJailRole(guild: Guild, user: User) {
+  // create the role
+  if (
+    !guild.roles.cache.find((role) => role.name === `${user.username}'s Jail`)
+  ) {
+    await guild.roles.create({
+      name: `${user.username}'s Jail`,
+      color: 'RED',
+      permissions: [Permissions.DEFAULT],
+    });
+  }
+
+  // changing channel permissions
+  guild.channels.cache.forEach((channel) => {
+    if (channel instanceof VoiceChannel) {
+      if (channel.name === `${user.username}'s Jail`) {
+        channel.permissionOverwrites.create(
+          guild.roles.cache.find(
+            (role) => role.name === `${user.username}'s Jail`
+          ),
+          { CONNECT: false }
+        );
+      }
+    }
+  });
 }
 
 client.login(process.env.BOT_TOKEN);

@@ -4,6 +4,7 @@ import {
   Intents,
   MessageEmbed,
   Permissions,
+  User,
   VoiceBasedChannel,
   VoiceChannel,
 } from 'discord.js';
@@ -103,24 +104,7 @@ client.on('interactionCreate', async (interaction) => {
     if (member.voice.channel) member.voice.setChannel(channel);
     member.roles.add(guild.roles.cache.find((role) => role.name === 'JAILED'));
 
-    let embed: MessageEmbed;
-    if (command.options.getString('reason')) {
-      embed = new MessageEmbed()
-        .setColor('AQUA')
-        .setTitle('Jailed!')
-        .setDescription(`${user} just got jailed by ${command.member}!`)
-        .setThumbnail(user.displayAvatarURL())
-        .addFields({
-          name: 'Reason',
-          value: command.options.getString('reason'),
-        });
-    } else {
-      embed = new MessageEmbed()
-        .setColor('AQUA')
-        .setTitle('Jailed!')
-        .setDescription(`${user} just got jailed by ${command.member}!`)
-        .setThumbnail(user.displayAvatarURL());
-    }
+    let embed: MessageEmbed = createEmbed(true, user, command);
 
     await command.reply({ embeds: [embed] });
   } else if (command.commandName === 'unjail') {
@@ -151,11 +135,7 @@ client.on('interactionCreate', async (interaction) => {
         .delete();
     }
 
-    const embed = new MessageEmbed()
-      .setColor('AQUA')
-      .setTitle('Unjailed!')
-      .setDescription(`${user} just got unjailed by ${command.member}!`)
-      .setThumbnail(user.displayAvatarURL());
+    const embed = createEmbed(false, user, command);
 
     await command.reply({ embeds: [embed] });
   }
@@ -173,5 +153,31 @@ client.on('channelCreate', (channel) => {
     }
   }
 });
+
+function createEmbed(
+  jailed: boolean,
+  user: User,
+  command: CommandInteraction
+): MessageEmbed {
+  const author = command.member.user as User;
+
+  const embed = new MessageEmbed()
+    .setColor('AQUA')
+    .setAuthor({
+      name: author.username,
+      iconURL: author.displayAvatarURL(),
+    })
+    .setTitle(jailed ? 'Jailed!' : 'Unjailed!')
+    .setDescription(
+      `${user} just got ${jailed ? 'jailed' : 'unjailed'} by ${command.member}!`
+    )
+    .setThumbnail(user.displayAvatarURL());
+  if (command.options.getString('reason'))
+    embed.addFields({
+      name: 'Reason',
+      value: command.options.getString('reason'),
+    });
+  return embed;
+}
 
 client.login(process.env.BOT_TOKEN);

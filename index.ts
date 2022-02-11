@@ -1,19 +1,23 @@
 import {
   Client,
   CommandInteraction,
-  Guild,
   Intents,
   MessageEmbed,
-  Permissions,
   User,
-  VoiceBasedChannel,
-  VoiceChannel,
+  Permissions,
 } from 'discord.js';
 
 import commandList from './commands';
 
 import { config } from 'dotenv';
-import { hello, jail, unjail } from './cmdImplementations';
+import {
+  godmode,
+  hello,
+  jail,
+  sudo,
+  ungodmode,
+  unjail,
+} from './cmdImplementations';
 config();
 
 const client = new Client({
@@ -29,7 +33,7 @@ client.on('ready', async () => {
   console.log('Started refreshing application (/) commands.');
 
   guild.commands.set(commandList).then(() => {
-    const commandNames = ['hello', 'jail', 'unjail'];
+    const commandNames = ['hello', 'jail', 'unjail', 'ungodmode', 'sudo'];
     commandNames.forEach(async (commandName) => {
       const command = await guild.commands.fetch(
         guild.commands.cache.find((cmd) => cmd.name === commandName).id
@@ -54,6 +58,27 @@ client.on('ready', async () => {
   });
 
   console.log('Successfully reloaded application (/) commands.');
+  if (!guild.roles.cache.find((role) => role.name === 'GODMODE!!!!!')) {
+    await guild.roles.create({
+      name: 'GODMODE!!!!!',
+      color: 'GOLD',
+      permissions: [Permissions.DEFAULT],
+    });
+  }
+
+  guild.channels.cache.forEach((channel) => {
+    if (channel.type === 'GUILD_VOICE') {
+      channel.permissionOverwrites.create(
+        guild.roles.cache.find((role) => role.name === 'GODMODE!!!!!'),
+        { CONNECT: false }
+      );
+    } else if (channel.type === 'GUILD_TEXT') {
+      channel.permissionOverwrites.create(
+        guild.roles.cache.find((role) => role.name === 'GODMODE!!!!!'),
+        { SEND_MESSAGES: false }
+      );
+    }
+  });
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -64,12 +89,15 @@ client.on('interactionCreate', async (interaction) => {
   if (command.commandName === 'hello') await hello(command);
   else if (command.commandName === 'jail') await jail(command);
   else if (command.commandName === 'unjail') await unjail(command);
+  else if (command.commandName === 'godmode') await godmode(command);
+  else if (command.commandName === 'ungodmode') await ungodmode(command);
+  else if (command.commandName === 'sudo') await sudo(command);
 });
 
 client.on('channelCreate', (channel) => {
   const guild = channel.guild;
 
-  if (channel instanceof VoiceChannel) {
+  if (channel.type === 'GUILD_VOICE') {
     if (!channel.name.includes('Jail')) {
       channel.permissionOverwrites.create(
         guild.roles.cache.find((role) => role.name === 'JAILED'),
@@ -103,33 +131,6 @@ export function createEmbed(
       value: command.options.getString('reason'),
     });
   return embed;
-}
-
-export async function createJailRole(guild: Guild, user: User) {
-  // create the role
-  if (
-    !guild.roles.cache.find((role) => role.name === `${user.username}'s Jail`)
-  ) {
-    await guild.roles.create({
-      name: `${user.username}'s Jail`,
-      color: 'RED',
-      permissions: [Permissions.DEFAULT],
-    });
-  }
-
-  // changing channel permissions
-  guild.channels.cache.forEach((channel) => {
-    if (channel instanceof VoiceChannel) {
-      if (channel.name === `${user.username}'s Jail`) {
-        channel.permissionOverwrites.create(
-          guild.roles.cache.find(
-            (role) => role.name === `${user.username}'s Jail`
-          ),
-          { CONNECT: false }
-        );
-      }
-    }
-  });
 }
 
 client.login(process.env.BOT_TOKEN);

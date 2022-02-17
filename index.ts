@@ -14,6 +14,7 @@ import {
   godmode,
   hello,
   jail,
+  joke,
   sudo,
   ungodmode,
   unjail,
@@ -32,32 +33,32 @@ client.on('ready', async () => {
 
   console.log('Started refreshing application (/) commands.');
 
-  guild.commands.set(commandList).then(() => {
-    const commandNames = ['hello', 'jail', 'unjail', 'ungodmode', 'sudo'];
-    commandNames.forEach(async (commandName) => {
-      const command = await guild.commands.fetch(
-        guild.commands.cache.find((cmd) => cmd.name === commandName).id
-      );
-      command.permissions.add({
-        permissions: [
-          {
-            id: guild.roles.everyone.id,
-            type: 'ROLE',
-            permission: false,
-          },
-          {
-            id: guild.roles.cache.find(
-              (role) => role.name === 'The Amazing Bot Manager'
-            ).id,
-            type: 'ROLE',
-            permission: true,
-          },
-        ],
+  await guild.commands
+    .set(commandList)
+    .then(() => {
+      const commandNames = ['hello', 'jail', 'unjail', 'ungodmode', 'sudo'];
+      commandNames.forEach(async (commandName) => {
+        const command = await guild.commands.fetch(
+          guild.commands.cache.find((cmd) => cmd.name === commandName).id
+        );
+        command.permissions.add({
+          permissions: [
+            {
+              id: guild.roles.everyone.id,
+              type: 'ROLE',
+              permission: false,
+            },
+            {
+              id: guild.ownerId,
+              type: 'USER',
+              permission: true,
+            },
+          ],
+        });
       });
-    });
-  });
+    })
+    .then(() => console.log('Successfully reloaded application (/) commands.'));
 
-  console.log('Successfully reloaded application (/) commands.');
   if (!guild.roles.cache.find((role) => role.name === 'GODMODE!!!!!')) {
     await guild.roles.create({
       name: 'GODMODE!!!!!',
@@ -92,6 +93,7 @@ client.on('interactionCreate', async (interaction) => {
   else if (command.commandName === 'godmode') await godmode(command);
   else if (command.commandName === 'ungodmode') await ungodmode(command);
   else if (command.commandName === 'sudo') await sudo(command);
+  else if (command.commandName === 'joke') await joke(command);
 });
 
 client.on('channelCreate', (channel) => {

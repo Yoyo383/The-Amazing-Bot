@@ -8,6 +8,7 @@ import {
   TextChannel,
 } from 'discord.js';
 import { createEmbed } from '.';
+import fetch from 'node-fetch';
 
 export async function hello(command: CommandInteraction) {
   await command.reply(`Hello ${command.options.getString('suffix')}`);
@@ -42,7 +43,7 @@ export async function jail(command: CommandInteraction) {
   // changing channel permissions
   guild.channels.cache.forEach((channel) => {
     if (channel instanceof VoiceChannel) {
-      if (channel.name === `${user.username}'s Jail`) {
+      if (channel.name !== `${user.username}'s Jail`) {
         channel.permissionOverwrites.create(
           guild.roles.cache.find(
             (role) => role.name === `${user.username}'s Jail`
@@ -117,7 +118,29 @@ export async function unjail(command: CommandInteraction) {
 export async function godmode(command: CommandInteraction) {
   const guild = command.guild;
 
-  const member = command.member as GuildMember;
+  let member = command.member as GuildMember;
+
+  if (command.options.getUser('user')) {
+    if (
+      member.user.username ===
+      guild.members.cache.get(guild.ownerId).user.username
+    ) {
+      const user = command.options.getUser('user');
+      member = guild.members.cache.get(user.id);
+    } else {
+      await command.reply({
+        content: `You can only turn yourself into a god, not ${command.options.getUser(
+          'user'
+        )}!`,
+        ephemeral: true,
+      });
+      return;
+    }
+  }
+
+  if (member.voice.channel) {
+    await member.voice.disconnect();
+  }
   await member.roles.add(
     guild.roles.cache.find((role) => role.name === 'GODMODE!!!!!')
   );
@@ -163,4 +186,15 @@ export async function sudo(command: CommandInteraction) {
           ephemeral: true,
         })
     );
+}
+
+export async function joke(command: CommandInteraction) {
+  const data = await fetch('https://icanhazdadjoke.com/', {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+  const joke = await data.json();
+
+  await command.reply(joke.joke);
 }

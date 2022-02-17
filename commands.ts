@@ -38,7 +38,13 @@ const unjail = new SlashCommandBuilder()
 
 const godmode = new SlashCommandBuilder()
   .setName('godmode')
-  .setDescription('TURNS YOU INTO A GOD 10000% LEGIT!!!!');
+  .setDescription('TURNS YOU INTO A GOD 10000% LEGIT!!!!')
+  .addUserOption((option) =>
+    option
+      .setName('user')
+      .setDescription("The user to turn into a god (only if you're an admin.")
+      .setRequired(false)
+  );
 
 const ungodmode = new SlashCommandBuilder()
   .setName('ungodmode')
@@ -63,11 +69,16 @@ const sudo = new SlashCommandBuilder()
       .setRequired(true)
   );
 
+const joke = new SlashCommandBuilder()
+  .setName('joke')
+  .setDescription('Sends a random joke!');
+
 commandList.push(hello.toJSON());
 commandList.push(jail.toJSON());
 commandList.push(unjail.toJSON());
 commandList.push(godmode.toJSON());
 commandList.push(ungodmode.toJSON());
 commandList.push(sudo.toJSON());
+commandList.push(joke.toJSON());
 
 export default commandList;
